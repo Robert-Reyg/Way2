@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ titulo }}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 2em; background-color: #f4f7f9; }
+        .container { max-width: 1600px; margin: 0 auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5em; }
+        .filtro-form { display: flex; gap: 15px; align-items: center; margin-bottom: 2em; padding: 1em; background: #f8f9fa; border-radius: 8px; }
+        .postura-form-row { display: grid; grid-template-columns: 30px 1.2fr 1.2fr 0.8fr 0.8fr 0.8fr 1.2fr 1.2fr auto; gap: 15px; align-items: end; padding: 1em; border-bottom: 1px solid #eee; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; font-size: 0.8em; margin-bottom: 5px; color: #555; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; color: white; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-primary { background-color: #007bff; }
+        .btn-success { background-color: #28a745; }
+        .btn-danger { background-color: #dc3545; height: 38px; line-height: 1; }
+        .empty-form { display: none; }
+        .numero-postura { font-weight: bold; font-size: 1.2em; text-align: center; }
+        /* Estilos para los mensajes de error */
+        .alert { padding: 1em; margin-bottom: 1em; border-radius: 5px; }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .errorlist { list-style-type: none; padding: 0; color: #721c24; font-size: 0.9em; }
+        .form-control.is-invalid { border-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ titulo }}</h1>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="GET" class="filtro-form">
+            <label>Fecha:</label>
+            <input type="date" name="fecha" value="{{ fecha_seleccionada }}" class="form-control" style="width: auto;">
+            <label>Turno:</label>
+            <select name="turno" class="form-control" style="width: auto;">
+                {% for valor, texto in opciones_turno %}
+                    <option value="{{ valor }}" {% if valor == turno_seleccionado %}selected{% endif %}>{{ texto }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Cargar Posturas</button>
+        </form>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="fecha" value="{{ fecha_seleccionada }}">
+            <input type="hidden" name="turno" value="{{ turno_seleccionado }}">
+            
+            {{ formset.management_form }}
+            {{ formset.non_form_errors }}
+
+            <div id="postura-forms-container">
+                {% for form in formset %}
+                    <div class="postura-form-row">
+                        <div class="form-group"><span class="numero-postura">{{ forloop.counter }}.</span></div>
+                        {% for field in form %}
+                            {% if field.name != 'DELETE' %}
+                                <div class="form-group">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="errorlist">{{ field.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                        <div class="form-group">
+                            {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                            <button type="button" class="btn btn-danger remove-form-row">Eliminar</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div id="empty-form" class="empty-form">
+                <div class="postura-form-row">
+                    <div class="form-group"><span class="numero-postura"></span></div>
+                    {% for field in formset.empty_form %}
+                         {% if field.name != 'DELETE' %}
+                            <div class="form-group">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    <div class="form-group">
+                        <button type="button" class="btn btn-danger remove-form-row">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="add-form-row" class="btn btn-primary" style="margin-top: 20px;">Añadir Postura</button>
+            <button type="submit" class="btn btn-success" style="margin-top: 20px;">Guardar Todas las Posturas</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('postura-forms-container');
+            const addButton = document.getElementById('add-form-row');
+            const totalFormsInput = document.querySelector('input[name="posturas-TOTAL_FORMS"]');
+            const emptyFormHtml = document.getElementById('empty-form').innerHTML;
+
+            function updateRowNumbers() {
+                const rows = container.querySelectorAll('.postura-form-row');
+                rows.forEach((row, index) => {
+                    if (row.style.display !== 'none') {
+                        const numberSpan = row.querySelector('.numero-postura');
+                        if (numberSpan) {
+                            numberSpan.textContent = `${index + 1}.`;
+                        }
+                    }
+                });
+            }
+
+            addButton.addEventListener('click', function() {
+                let formNum = parseInt(totalFormsInput.value);
+                const newDiv = document.createElement('div');
+                newDiv.innerHTML = emptyFormHtml.replace(/__prefix__/g, formNum);
+                const newFormRow = newDiv.firstElementChild;
+                container.appendChild(newFormRow);
+                totalFormsInput.value = formNum + 1;
+                updateRowNumbers();
+            });
+
+            container.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('remove-form-row')) {
+                    const rowToRemove = e.target.closest('.postura-form-row');
+                    const deleteInput = rowToRemove.querySelector('input[type="checkbox"][id$="-DELETE"]');
+                    if (deleteInput) {
+                        deleteInput.checked = true;
+                        rowToRemove.style.display = 'none';
+                    } else {
+                        rowToRemove.remove();
+                        totalFormsInput.value = parseInt(totalFormsInput.value) - 1;
+                    }
+                    updateRowNumbers();
+                }
+            });
+
+            updateRowNumbers();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo }}</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2em; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 2em; box-shadow: 0 0 10px rgba(0,0,0,0.05); border-radius: 8px; }
+        h1 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 0.5em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 2em; font-size: 0.9em; }
+        th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .filtro-form { margin-bottom: 2em; display: flex; align-items: center; gap: 10px; }
+        .filtro-form input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .filtro-form button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'empresa:lista_empleados' %}">&larr; Volver</a>
+        
+        <h1>{{ titulo }}</h1>
+
+        <form method="get" class="filtro-form">
+            <label for="fecha">Seleccionar fecha:</label>
+            <input type="date" id="fecha" name="fecha" value="{{ fecha_seleccionada }}">
+            <button type="submit">Ver Reporte</button>
+        </form>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Empleado</th>
+                    <th>Equipo</th>
+                    <th>Turno</th>
+                    <th>Horómetro Inicial</th>
+                    <th>Horómetro Final</th>
+                    <th>Horas</th>
+                    <th>Comb. Inicial</th>
+                    <th>Comb. Final</th>
+                    <th>Comb. Cargado (Lts)</th>
+                    <th>Proyecto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mov in movimientos %}
+                <tr>
+                    <td>{{ mov.id }}</td>
+                    <td>{{ mov.empleado.nombre_completo|default:"-" }}</td>
+                    <td>{{ mov.maquinaria.codigo_eq|default:"-" }}</td>
+                    <td>{{ mov.turno }}</td>
+                    <td>{{ mov.horometro_inicial }}</td>
+                    <td>{{ mov.horometro_final }}</td>
+                    <td>{{ mov.horas_trabajadas }}</td>
+                    <td>{{ mov.get_nivel_inicial_combustible_display }}</td>
+                    <td>{{ mov.get_nivel_final_combustible_display }}</td>
+                    <td>{{ mov.combustible_cargado|default_if_none:"0" }}</td>
+                    <td>{{ mov.proyecto }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11" style="text-align: center; padding: 20px;">No se encontraron movimientos para la fecha seleccionada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

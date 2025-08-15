@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo }}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 2em; background-color: #f4f7f9; color: #333; }
+        .container { max-width: 1600px; margin: 0 auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.07); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5em; }
+        h2 { font-size: 1.5em; margin-top: 2em; }
+        /* ... (tus otros estilos para filtros, etc.) ... */
+        .equipo-seccion { margin-bottom: 2.5em; }
+        .equipo-tabla { width: 100%; border-collapse: collapse; }
+        .equipo-tabla th, .equipo-tabla td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; font-size: 0.9em; }
+        .equipo-tabla th { background-color: #e9ecef; }
+        .nested-table { width: 100%; }
+        .nested-table th { background-color: #fdfdfe; font-size: 0.85em; text-align: center; padding: 4px; }
+        .nested-table td { text-align: center; padding: 4px; }
+        .nested-table input, .fila-aljibe input { width: 60px; text-align: center; }
+        .total-cell, .total { font-weight: bold; }
+        .fila-tolva, .fila-aljibe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Informe de Producción Diario</h1>
+
+        {% if messages %}
+            <div class="messages" style="list-style-type: none; padding: 0; margin: 0 0 1em 0;">
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-warning{% endif %}" style="padding: 1em; border-radius: 5px; margin-bottom: 1em; border: 1px solid;">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" class="filtro-form">
+            {% csrf_token %}
+            <label for="fecha">Fecha:</label>
+            <input type="date" id="fecha" name="fecha" value="{{ fecha_seleccionada }}">
+            <label for="turno">Turno:</label>
+            <select id="turno" name="turno">
+                {% for valor, texto in opciones_turno %}
+                    <option value="{{ valor }}" {% if valor == turno_seleccionado %}selected{% endif %}>{{ texto }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" name="action" value="filtrar">Actualizar Informe</button>
+            <a href="{% url 'empresa:generar_informe_pdf' fecha=fecha_seleccionada turno=turno_seleccionado %}" target="_blank" class="btn-pdf" style="background-color:#dc3545; color:white; text-decoration:none;">Descargar PDF</a>
+        </form>
+        
+        <form method="post" class="filtro-form" style="background-color: #e9ecef;">
+            {% csrf_token %}
+            <input type="hidden" name="fecha" value="{{ fecha_seleccionada }}">
+            <input type="hidden" name="turno" value="{{ turno_seleccionado }}">
+            <label for="lider_tirreno">Líder Turno Tirreno:</label>
+            <select name="lider_tirreno" id="lider_tirreno">
+                <option value="">---------</option>
+                {% for lider in lideres_tirreno %}<option value="{{ lider.id }}" {% if informe_diario.lider_tirreno_id == lider.id %}selected{% endif %}>{{ lider.nombre_completo }}</option>{% endfor %}
+            </select>
+            <label for="jefe_mandante">Jefe Turno Mandante:</label>
+            <select name="jefe_mandante" id="jefe_mandante">
+                <option value="">---------</option>
+                {% for jefe in jefes_mandante %}<option value="{{ jefe.id }}" {% if informe_diario.jefe_mandante_id == jefe.id %}selected{% endif %}>{{ jefe.nombre_completo }}</option>{% endfor %}
+            </select>
+            <button type="submit" name="action" value="guardar_lideres">Guardar Líderes</button>
+        </form>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="fecha" value="{{ fecha_seleccionada }}">
+            <input type="hidden" name="turno" value="{{ turno_seleccionado }}">
+
+            <div class="equipo-seccion">
+                <h2>A1. Equipos Pesados - {{ turno_seleccionado }} {{ fecha_seleccionada|date:"d-m-Y" }}</h2>
+                <table class="equipo-tabla">
+                    <thead><tr><th style="width: 15%;">Equipo</th><th style="width: 8%;">Código</th><th style="width: 25%;">Datos Automáticos</th><th>Movimientos del Turno</th></tr></thead>
+                    <tbody>
+                        {% for equipo in equipos_pesados %}
+                        <tr>
+                            <td>{{ equipo.tipo }}</td><td>{{ equipo.codigo_eq }}</td>
+                            <td>
+                                {% if equipo.datos_reporte %}<p><strong>Inicio:</strong> {{ equipo.datos_reporte.hora_inicio }} | <strong>Fin:</strong> {{ equipo.datos_reporte.hora_termino }}</p><p><strong>Hrs:</strong> {{ equipo.datos_reporte.total_horas|floatformat:2 }} | <strong>Comb:</strong> {{ equipo.datos_reporte.total_combustible|floatformat:2|default_if_none:"0.00" }} Lts</p>{% else %}<p style="color: #888;">Sin movimientos registrados</p>{% endif %}
+                            </td>
+                            <td>
+                                {% if equipo.tipo == 'Cargador Frontal' %}
+                                    {% with despacho=equipo.datos_produccion.datos_despacho_fabrica remanejo=equipo.datos_produccion.datos_remanejo_apoyo %}
+                                    <table class="nested-table">
+                                        <thead><tr><th></th><th>Cemento</th><th>Normal</th><th>6/15</th><th>15/50</th><th>Bitumix</th><th>Fino</th><th>Carga Buzón</th><th>Otro</th><th>Total</th></tr></thead>
+                                        <tbody>
+                                            <tr data-tipo="despacho"><td style="font-weight: bold; text-align: left;">Despacho Fábrica</td><td><input type="number" name="despacho_{{ equipo.id }}_cemento" value="{{ despacho.cemento|default_if_none:'' }}"></td><td><input type="number" name="despacho_{{ equipo.id }}_normal" value="{{ despacho.normal|default_if_none:'' }}"></td><td><input type="number" name="despacho_{{ equipo.id }}_6_15" value="{{ despacho.6_15|default_if_none:'' }}"></td><td><input type="number" name="despacho_{{ equipo.id }}_15_50" value="{{ despacho.15_50|default_if_none:'' }}"></td><td><input type="number" name="despacho_{{ equipo.id }}_bitumix" value="{{ despacho.bitumix|default_if_none:'' }}"></td><td><input type="number" name="despacho_{{ equipo.id }}_fino" value="{{ despacho.fino|default_if_none:'' }}"></td><td><input type="number" name="despacho_{{ equipo.id }}_carga_buzon" value="{{ despacho.carga_buzon|default_if_none:'' }}"></td><td><input type="number" name="despacho_{{ equipo.id }}_otro" value="{{ despacho.otro|default_if_none:'' }}"></td><td class="total-cell">0</td></tr>
+                                            <tr data-tipo="remanejo"><td style="font-weight: bold; text-align: left;">Remanejo/Apoyo</td><td><input type="number" name="remanejo_{{ equipo.id }}_cemento" value="{{ remanejo.cemento|default_if_none:'' }}"></td><td><input type="number" name="remanejo_{{ equipo.id }}_normal" value="{{ remanejo.normal|default_if_none:'' }}"></td><td><input type="number" name="remanejo_{{ equipo.id }}_6_15" value="{{ remanejo.6_15|default_if_none:'' }}"></td><td><input type="number" name="remanejo_{{ equipo.id }}_15_50" value="{{ remanejo.15_50|default_if_none:'' }}"></td><td><input type="number" name="remanejo_{{ equipo.id }}_bitumix" value="{{ remanejo.bitumix|default_if_none:'' }}"></td><td><input type="number" name="remanejo_{{ equipo.id }}_fino" value="{{ remanejo.fino|default_if_none:'' }}"></td><td><input type="number" name="remanejo_{{ equipo.id }}_carga_buzon" value="{{ remanejo.carga_buzon|default_if_none:'' }}"></td><td><input type="number" name="remanejo_{{ equipo.id }}_otro" value="{{ remanejo.otro|default_if_none:'' }}"></td><td class="total-cell">0</td></tr>
+                                        </tbody>
+                                    </table>
+                                    {% endwith %}
+                                {% elif equipo.tipo == 'Excavadora' or equipo.tipo == 'Motoniveladora' %}
+                                    <textarea name="observaciones_{{ equipo.id }}" rows="3" style="width: 100%;" placeholder="Añadir observaciones...">{{ equipo.datos_produccion.observaciones|default_if_none:"" }}</textarea>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}<tr><td colspan="4">No se encontraron equipos pesados.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="equipo-seccion">
+                <h2>A2. Camiones Tolva</h2>
+                <table class="equipo-tabla">
+                    <thead><tr><th style="width: 15%;">Equipo</th><th style="width: 8%;">Código</th><th style="width: 25%;">Datos Automáticos</th><th>Movimientos del Turno (Viajes)</th></tr></thead>
+                    <tbody>
+                        {% for equipo in camiones_tolva %}
+                        <tr>
+                            <td>{{ equipo.tipo }}</td><td>{{ equipo.codigo_eq }}</td>
+                            <td>
+                                {% if equipo.datos_reporte %}<p><strong>Inicio:</strong> {{ equipo.datos_reporte.hora_inicio }} | <strong>Fin:</strong> {{ equipo.datos_reporte.hora_termino }}</p><p><strong>Hrs:</strong> {{ equipo.datos_reporte.total_horas|floatformat:2 }} | <strong>Comb:</strong> {{ equipo.datos_reporte.total_combustible|floatformat:2|default_if_none:"0.00" }} Lts</p>{% else %}<p style="color: #888;">Sin movimientos</p>{% endif %}
+                            </td>
+                            <td>
+                                <table class="nested-table">
+                                    <thead><tr><th>V1</th><th>V2</th><th>V3</th><th>V4</th><th>V5</th><th>V6</th><th>V7</th><th>V8</th><th>V9</th><th>V10</th><th>Total</th></tr></thead>
+                                    <tbody>
+                                        <tr data-tipo="tolva">
+                                            {% for campo in equipo.lista_datos_tolva %}
+                                                <td><input type="number" name="tolva_{{ equipo.id }}_campo_{{ campo.id }}" value="{{ campo.valor }}"></td>
+                                            {% endfor %}
+                                            <td class="total-cell">0</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        {% empty %}<tr><td colspan="4">No se encontraron camiones tolva.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="equipo-seccion">
+                <h2>A3. Camiones Aljibe</h2>
+                <table class="equipo-tabla">
+                     <thead><tr><th style="width: 15%;">Equipo</th><th style="width: 8%;">Código</th><th style="width: 25%;">Datos Automáticos</th><th>Datos de Producción Manual (Viajes de Agua en Ton.)</th></tr></thead>
+                     <tbody>
+                        {% for equipo in camiones_aljibe %}
+                        <tr>
+                            <td>{{ equipo.tipo }}</td><td>{{ equipo.codigo_eq }}</td>
+                            <td>
+                                {% if equipo.datos_reporte and equipo.datos_reporte.total_combustible is not None %}<p><strong>Combustible:</strong> {{ equipo.datos_reporte.total_combustible|floatformat:2 }} Lts</p>{% else %}<p style="color: #888;">Sin consumo</p>{% endif %}
+                            </td>
+                            <td>
+                                <div class="produccion-inputs"><div class="fila-aljibe">
+                                    {% for campo in equipo.lista_datos_aljibe %}<label>Viaje {{ campo.id }}:</label><input type="number" name="aljibe_{{ equipo.id }}_viaje_{{ campo.id }}" value="{{ campo.valor }}">{% endfor %}
+                                    <span class="total">{% if equipo.codigo_eq == 'WT-12' %}Total Agua Potable:{% elif equipo.codigo_eq == 'WT-17' %}Total Agua Industrial:{% else %}Total Viajes:{% endif %}<span class="total-valor">0</span></span>
+                                </div></div>
+                            </td>
+                        </tr>
+                        {% empty %}<tr><td colspan="4">No se encontraron camiones aljibe.</td></tr>{% endfor %}
+                     </tbody>
+                </table>
+            </div>
+
+            <button type="submit" name="action" value="guardar_produccion" style="padding: 12px 25px; font-size: 1.1em; background-color: #28a745;">Guardar Cambios en el Informe</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function calcularTotalFila(fila) {
+                const inputs = fila.querySelectorAll('input[type="number"]');
+                let totalCell = fila.querySelector('.total-cell');
+                if (!totalCell) { totalCell = fila.querySelector('.total-valor'); }
+                if (!totalCell) return;
+                let total = 0;
+                inputs.forEach(input => { total += parseFloat(input.value) || 0; });
+                totalCell.textContent = total;
+            }
+            const filasDeProduccion = document.querySelectorAll('.nested-table tbody tr, .fila-tolva, .fila-aljibe');
+            filasDeProduccion.forEach(fila => {
+                calcularTotalFila(fila);
+                const inputsDeLaFila = fila.querySelectorAll('input[type="number"]');
+                inputsDeLaFila.forEach(input => {
+                    input.addEventListener('input', () => calcularTotalFila(fila));
+                });
+            });
+        });
+    </script>
+</body>
+</html>

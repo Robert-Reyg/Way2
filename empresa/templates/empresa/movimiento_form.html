@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Nuevo Movimiento</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2em; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background-color: white; padding: 2em; box-shadow: 0 0 10px rgba(0,0,0,0.05); border-radius: 8px; }
+        .form-section { border-top: 1px solid #eee; padding-top: 1.5em; margin-top: 1.5em; }
+        h1, h2, h3 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 0.5em;}
+        .form-grid { display: grid; grid-template-columns: 180px 1fr; gap: 0.5em; align-items: center; }
+        .form-grid label { font-weight: bold; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
+        input[readonly], input[disabled], select[disabled] { background-color: #f2f2f2; cursor: not-allowed; }
+        button { width: 100%; padding: 12px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; font-size: 1.1em; border-radius: 4px; margin-top: 1em; }
+        button:hover { background-color: #0056b3; }
+        .errorlist { list-style-type: none; padding: 0; color: red; font-weight: bold; font-size: 0.9em; }
+        .field-errors { grid-column-start: 2; margin-top: -0.8em; margin-bottom: 0.5em; }
+        .form-row-condicional { grid-column: 1 / -1; display: none; grid-template-columns: 180px 1fr; gap: 1em; align-items: center; margin-top: 1em; }
+        .nivel-inicial-readonly { pointer-events: none; background-color: #f2f2f2; color: #888; }
+        .formset-row { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; padding: 0.5em 0; }
+        .formset-row label { flex-basis: 70%; margin-right: 1em; }
+        .formset-row input { flex-basis: 30%; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Registrar Nuevo Movimiento</h1>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" style="padding: 1em; border-radius: 5px; margin-bottom: 1em; border: 1px solid;">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" id="form-movimiento-completo">
+            {% csrf_token %}
+            
+            <!-- 1. Identificación del Trabajador y Licencia -->
+            <div class="form-section">
+                <h2>1. Identificación del Trabajador</h2>
+                <div class="form-grid">
+                    <label for="id_codigo_trabajador">Código de Trabajador:</label>
+                    <div><input type="text" id="id_codigo_trabajador" placeholder="Ingrese código y presione Tab"></div>
+                    
+                    <label>Nombre:</label><div><input type="text" id="id_nombre_completo" disabled></div>
+                    <label>RUT:</label><div><input type="text" id="id_rut" disabled></div>
+                    <label>Cargo:</label><div><input type="text" id="id_cargo" disabled></div>
+                    
+                    <label>Licencias:</label><div><input type="text" id="id_licencias" disabled></div>
+                    <label>Vencimiento Licencia:</label>
+                    <div>
+                        <input type="text" id="id_vencimiento_licencia" disabled style="width: 50%; display: inline-block;">
+                        <span id="mensaje_vencimiento" style="margin-left: 10px; font-weight: bold;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Detalles del Movimiento (Turno, Maquinaria, Horómetros) -->
+            <div class="form-section">
+                <h2>2. Detalles del Movimiento</h2>
+                <div class="form-grid">
+                    <label for="{{ form.fecha.id_for_label }}">Fecha:</label>
+                    <div>{{ form.fecha }}{{ form.fecha.errors }}</div>
+                    <label for="{{ form.turno.id_for_label }}">Turno:</label>
+                    <div>{{ form.turno }}{{ form.turno.errors }}</div>
+                    <label for="{{ form.maquinaria.id_for_label }}">Maquinaria:</label>
+                    <div>{{ form.maquinaria }}{{ form.maquinaria.errors }}</div>
+                    <label for="{{ form.horometro_inicial.id_for_label }}">Horómetro inicial:</label>
+                    <div>{{ form.horometro_inicial }}{{ form.horometro_inicial.errors }}</div>
+                    <label for="{{ form.horometro_final.id_for_label }}">Horómetro final:</label>
+                    <div>{{ form.horometro_final }}{{ form.horometro_final.errors }}</div>
+                    <label for="{{ form.horas_trabajadas.id_for_label }}">Horas trabajadas:</label>
+                    <div>{{ form.horas_trabajadas }}{{ form.horas_trabajadas.errors }}</div>
+                    <label for="{{ form.descripcion_trabajo_especial.id_for_label }}">Descripción trabajo especial:</label>
+                    <div>{{ form.descripcion_trabajo_especial }}{{ form.descripcion_trabajo_especial.errors }}</div>
+                </div>
+            </div>
+
+            <!-- 3. Combustible y Observaciones -->
+            <div class="form-section">
+                <h2>3. Combustible y Observaciones</h2>
+                <div class="form-grid">
+                    <label for="{{ form.proyecto.id_for_label }}">Proyecto:</label>
+                    <div>{{ form.proyecto }}{{ form.proyecto.errors }}</div>
+                    <label for="{{ form.combustible_cargado.id_for_label }}">Combustible cargado (Lts):</label>
+                    <div>{{ form.combustible_cargado }}{{ form.combustible_cargado.errors }}</div>
+                    <label for="{{ form.origen_combustible.id_for_label }}">Origen del combustible:</label>
+                    <div>{{ form.origen_combustible }}{{ form.origen_combustible.errors }}</div>
+                    <div class="form-row-condicional" id="detalle-chip-row">
+                        <label for="{{ form.detalle_chip_otro_equipo.id_for_label }}">Detalle Chip Otro Equipo:</label>
+                        <div>{{ form.detalle_chip_otro_equipo }}<div class="field-errors">{{ form.detalle_chip_otro_equipo.errors }}</div></div>
+                    </div>
+                    <label for="{{ form.nivel_inicial_combustible.id_for_label }}">Nivel Inicial Combustible:</label>
+                    <div>{{ form.nivel_inicial_combustible }}<small style="color: #6c757d;">Automático.</small></div>
+                    <label for="{{ form.nivel_final_combustible.id_for_label }}">Nivel Final Combustible:</label>
+                    <div>{{ form.nivel_final_combustible }}<div class="field-errors">{{ form.nivel_final_combustible.errors }}</div></div>
+                    <label for="{{ form.observaciones.id_for_label }}">Observaciones:</label>
+                    <div>{{ form.observaciones }}{{ form.observaciones.errors }}</div>
+                </div>
+            </div>
+
+            <!-- 4. Registro de Viajes por Postura (se renderizará con JavaScript) -->
+            <div class="form-section" id="seccion-viajes">
+                <h2>4. Registro de Viajes por Postura</h2>
+                <p>Ingrese la cantidad de viajes realizados para cada postura definida.</p>
+                {{ formset.management_form }}
+                <div id="viajes-formset-container">
+                    <!-- Los formularios de Viajes se insertarán aquí dinámicamente -->
+                    {% if formset.non_form_errors %}
+                        <div class="errorlist">{{ formset.non_form_errors }}</div>
+                    {% endif %}
+                    {% for viaje_form in formset %}
+                        <div class="formset-row">
+                            <label>Postura #{{ forloop.counter }}: {{ viaje_form.postura.value }}</label>
+                            <div>
+                                {{ viaje_form.cantidad }}
+                                {% if viaje_form.cantidad.errors %}
+                                    <div class="field-errors">{{ viaje_form.cantidad.errors }}</div>
+                                {% endif %}
+                                {{ viaje_form.id }}
+                                {{ viaje_form.postura }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button type="submit">Guardar Movimiento Completo</button>
+            {# Campo oculto para el ID del empleado, crucial para el backend #}
+            {{ form.empleado }} 
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Unir todos los forms en uno solo
+            const form = document.getElementById('form-movimiento-completo');
+            const fechaInput = document.getElementById('id_fecha');
+            const turnoSelect = document.getElementById('id_turno');
+            const viajesContainer = document.getElementById('viajes-formset-container');
+            const totalFormsInput = document.getElementById('id_viajes-TOTAL_FORMS');
+            
+            // Lógica para cargar dinámicamente el formset de viajes
+            function cargarViajes() {
+                const fecha = fechaInput.value;
+                const turno = turnoSelect.value;
+                
+                // Limpiar el formset y ocultar la sección si no hay datos
+                viajesContainer.innerHTML = '';
+                // document.getElementById('seccion-viajes').style.display = 'none'; // Comentado para depuración
+                totalFormsInput.value = 0;
+
+                if (!fecha || !turno) {
+                    // Si no hay fecha o turno, ocultar la sección de viajes
+                    document.getElementById('seccion-viajes').style.display = 'none';
+                    return;
+                }
+
+                // Llamada a la API para obtener las posturas
+                fetch(`/api/obtener-posturas/?fecha=${fecha}&turno=${turno}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('No se pudieron cargar las posturas.');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.posturas.length > 0) {
+                            document.getElementById('seccion-viajes').style.display = 'block';
+                            totalFormsInput.value = data.posturas.length;
+                            
+                            data.posturas.forEach((postura, index) => {
+                                // Generar cada campo del formset de forma dinámica
+                                const row = document.createElement('div');
+                                row.classList.add('formset-row');
+                                row.innerHTML = `
+                                    <label>Postura #${postura.id}: ${postura.descripcion}</label>
+                                    <div>
+                                        <input type="number" name="viajes-${index}-cantidad" id="id_viajes-${index}-cantidad" min="0" step="1" value="0">
+                                        <input type="hidden" name="viajes-${index}-postura" value="${postura.id}">
+                                        <input type="hidden" name="viajes-${index}-id">
+                                    </div>
+                                `;
+                                viajesContainer.appendChild(row);
+                            });
+                        } else {
+                            // Si no hay posturas, ocultar la sección de viajes
+                            document.getElementById('seccion-viajes').style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Puedes mostrar un mensaje de error en la UI
+                        document.getElementById('seccion-viajes').style.display = 'none'; // Ocultar en caso de error
+                    });
+            }
+            
+            // Escuchar cambios en la fecha y el turno para cargar los viajes
+            fechaInput.addEventListener('change', cargarViajes);
+            turnoSelect.addEventListener('change', cargarViajes);
+
+            // Cargar los viajes iniciales si ya existen valores en el formulario (por ejemplo, después de un error de validación)
+            if (fechaInput.value && turnoSelect.value) {
+                cargarViajes();
+            }
+
+            // Lógica existente para Horómetro, Trabajador y Combustible (se mantiene igual)
+            const codigoTrabajadorInput = document.getElementById('id_codigo_trabajador');
+            if (codigoTrabajadorInput) {
+                codigoTrabajadorInput.addEventListener('blur', function() {
+                    const codigo = this.value;
+                    const mensajeVencimiento = document.getElementById('mensaje_vencimiento');
+                    const camposParaLimpiar = ['id_nombre_completo', 'id_rut', 'id_cargo', 'id_licencias', 'id_vencimiento_licencia'];
+                    camposParaLimpiar.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                    const empleadoHiddenInput = document.querySelector('[name=empleado]');
+                    if (empleadoHiddenInput) empleadoHiddenInput.value = '';
+                    mensajeVencimiento.textContent = '';
+                    if (!codigo) { return; }
+                    fetch(`/api/buscar-empleado/?codigo=${codigo}`)
+                        .then(response => response.ok ? response.json() : Promise.reject('Empleado no encontrado'))
+                        .then(data => {
+                            document.getElementById('id_nombre_completo').value = data.nombre_completo || '';
+                            document.getElementById('id_rut').value = data.rut || '';
+                            document.getElementById('id_cargo').value = data.cargo || '';
+                            document.getElementById('id_licencias').value = data.tipo_licencia || '';
+                            document.getElementById('id_vencimiento_licencia').value = data.fecha_vencimiento_licencia || 'No especificada';
+                            if (empleadoHiddenInput) empleadoHiddenInput.value = data.id || '';
+                            if (data.dias_vencimiento_licencia !== null) {
+                                if (data.dias_vencimiento_licencia < 0) {
+                                    mensajeVencimiento.textContent = `(Vencida hace ${Math.abs(data.dias_vencimiento_licencia)} días)`;
+                                    mensajeVencimiento.style.color = 'red';
+                                } else if (data.dias_vencimiento_licencia <= 60) {
+                                    mensajeVencimiento.textContent = `(¡Vence en ${data.dias_vencimiento_licencia} días!)`;
+                                    mensajeVencimiento.style.color = 'orange';
+                                } else {
+                                    mensajeVencimiento.textContent = `(Vence en ${data.dias_vencimiento_licencia} días)`;
+                                    mensajeVencimiento.style.color = 'green';
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('No se encontró ningún empleado con ese código.');
+                        });
+                });
+            }
+
+            const horometroInicialInput = document.getElementById('id_horometro_inicial');
+            const horometroFinal = document.getElementById('id_horometro_final');
+            const horasTrabajadas = document.getElementById('id_horas_trabajadas');
+
+            function calcularHoras() {
+                const inicio = parseFloat(horometroInicialInput.value) || 0;
+                const fin = parseFloat(horometroFinal.value) || 0;
+                
+                if (fin > inicio) {
+                    const horas = (fin - inicio); 
+                    horasTrabajadas.value = horas.toFixed(2);
+                } else {
+                    horasTrabajadas.value = '';
+                }
+            }
+
+            if (horometroFinal && horometroInicialInput && horasTrabajadas) {
+                horometroFinal.addEventListener('input', calcularHoras);
+            }
+            
+            const maquinariaSelect = document.getElementById('id_maquinaria');
+            if (maquinariaSelect) {
+                maquinariaSelect.addEventListener('change', function() {
+                    const maquinariaId = this.value;
+                    if (!maquinariaId) {
+                        horometroInicialInput.value = '';
+                        return;
+                    }
+                    fetch(`/api/ultimo-horometro/?maquinaria_id=${maquinariaId}`)
+                        .then(response => response.ok ? response.json() : Promise.reject('Error de red'))
+                        .then(data => {
+                            horometroInicialInput.value = data.ultimo_horometro || 0;
+                            calcularHoras(); 
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            horometroInicialInput.value = 'Error';
+                        });
+                });
+            }
+            
+            const origenSelect = document.getElementById('id_origen_combustible');
+            const detalleChipRow = document.getElementById('detalle-chip-row');
+            function toggleDetalleChip() {
+                if (origenSelect && detalleChipRow) {
+                    if (origenSelect.value === 'Estación Copec con Chip de otro Equipo') {
+                        detalleChipRow.style.display = 'grid';
+                    } else {
+                        detalleChipRow.style.display = 'none';
+                    }
+                }
+            }
+            if (origenSelect) {
+                toggleDetalleChip();
+                origenSelect.addEventListener('change', toggleDetalleChip);
+            }
+        });
+    </script>
+</body>
+</html>

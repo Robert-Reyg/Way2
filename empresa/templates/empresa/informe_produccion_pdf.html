@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ titulo }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1cm; }
+        body { font-family: system-ui, -apple-system, sans-serif; font-size: 10px; color: #333; }
+        .container { width: 100%; }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5em; text-align: center; }
+        h2 { font-size: 1.2em; margin-top: 1.5em; }
+        .info-lideres { text-align: center; margin-bottom: 2em; }
+        .equipo-seccion { margin-bottom: 1.5em; page-break-inside: avoid; }
+        .equipo-tabla { width: 100%; border-collapse: collapse; }
+        .equipo-tabla th, .equipo-tabla td { padding: 5px; border: 1px solid #ddd; text-align: left; vertical-align: middle; }
+        .equipo-tabla th { background-color: #e9ecef; }
+        .nested-table { width: 100%; }
+        .nested-table th { background-color: #fdfdfe; font-size: 0.9em; text-align: center; }
+        .nested-table td { text-align: center; }
+        .total-cell, .total { font-weight: bold; }
+        .fila-tolva, .fila-aljibe { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ titulo }}</h1>
+
+        <div class="info-lideres">
+            <strong>Líder Turno Tirreno:</strong> {{ informe_diario.lider_tirreno.nombre_completo|default:"No asignado" }} | 
+            <strong>Jefe Turno Mandante:</strong> {{ informe_diario.jefe_mandante.nombre_completo|default:"No asignado" }}
+        </div>
+
+        <div class="equipo-seccion">
+            <h2>A1. Equipos Pesados</h2>
+            <table class="equipo-tabla">
+                <thead><tr><th style="width: 15%;">Equipo</th><th style="width: 8%;">Código</th><th style="width: 25%;">Datos Automáticos</th><th>Datos de Producción Manual</th></tr></thead>
+                <tbody>
+                    {% for equipo in equipos_pesados %}
+                    <tr>
+                        <td>{{ equipo.tipo }}</td><td>{{ equipo.codigo_eq }}</td>
+                        <td>
+                            {% if equipo.datos_reporte %}<p><strong>Inicio:</strong> {{ equipo.datos_reporte.hora_inicio }} | <strong>Fin:</strong> {{ equipo.datos_reporte.hora_termino }}</p><p><strong>Hrs:</strong> {{ equipo.datos_reporte.total_horas|floatformat:2 }} | <strong>Comb:</strong> {{ equipo.datos_reporte.total_combustible|floatformat:2|default_if_none:"0.00" }} Lts</p>{% else %}<p>Sin movimientos</p>{% endif %}
+                        </td>
+                        <td>
+                            {% if equipo.tipo == 'Cargador Frontal' %}
+                                {% elif equipo.tipo == 'Excavadora' or equipo.tipo == 'Motoniveladora' %}
+                                {{ equipo.datos_produccion.observaciones|default_if_none:"" }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="4">No se encontraron equipos pesados.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="equipo-seccion">
+            <h2>A2. Camiones Tolva</h2>
+            <table class="equipo-tabla">
+                <thead><tr><th style="width: 15%;">Equipo</th><th style="width: 8%;">Código</th><th style="width: 25%;">Datos Automáticos</th><th>Datos de Producción Manual</th></tr></thead>
+                <tbody>
+                    {% for equipo in camiones_tolva %}
+                    <tr>
+                        <td>{{ equipo.tipo }}</td><td>{{ equipo.codigo_eq }}</td>
+                        <td>
+                            {% if equipo.datos_reporte %}<p><strong>Inicio:</strong> {{ equipo.datos_reporte.hora_inicio }} | <strong>Fin:</strong> {{ equipo.datos_reporte.hora_termino }}</p><p><strong>Hrs:</strong> {{ equipo.datos_reporte.total_horas|floatformat:2 }} | <strong>Comb:</strong> {{ equipo.datos_reporte.total_combustible|floatformat:2|default_if_none:"0.00" }} Lts</p>{% else %}<p>Sin movimientos</p>{% endif %}
+                        </td>
+                        <td>
+                            </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="4">No se encontraron camiones tolva.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="equipo-seccion">
+            <h2>A3. Camiones Aljibe</h2>
+            <table class="equipo-tabla">
+                 <thead><tr><th style="width: 15%;">Equipo</th><th style="width: 8%;">Código</th><th style="width: 25%;">Datos Automáticos</th><th>Datos de Producción Manual (Viajes)</th></tr></thead>
+                 <tbody>
+                    {% for equipo in camiones_aljibe %}
+                    <tr>
+                        <td>{{ equipo.tipo }}</td><td>{{ equipo.codigo_eq }}</td>
+                        <td>
+                            {% if equipo.datos_reporte and equipo.datos_reporte.total_combustible is not None %}<p><strong>Combustible:</strong> {{ equipo.datos_reporte.total_combustible|floatformat:2 }} Lts</p>{% else %}<p>Sin consumo</p>{% endif %}
+                        </td>
+                        <td>
+                           </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="4">No se encontraron camiones aljibe.</td></tr>{% endfor %}
+                 </tbody>
+            </table>
+        </div>
+
+    </div>
+</body>
+</html>
